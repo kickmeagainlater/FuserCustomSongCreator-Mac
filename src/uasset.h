@@ -1346,6 +1346,7 @@ struct HmxAudio {
 								doNotSaveEvent = true;
 							}
 							else {
+								outString = track.strings[outData.string_index];
 								MetaEvent outMetaEvent = MetaEvent((MetaEventType)outData.type, outString);
 								outEvent.inner_event = std::move(outMetaEvent);
 							}

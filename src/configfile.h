@@ -19,6 +19,7 @@ struct ConfigFile {
 	float RG1 = 0;
 	float RG2 = 0;
 	float RG3 = 0;
+	bool disableClamping = false;
 	std::string defaultShortName = "custom_song";
 	void saveConfig(const std::wstring& configFile) {
 		std::ofstream outFile(configFile, std::ios_base::binary);
@@ -55,6 +56,8 @@ struct ConfigFile {
 		outFile.write("RG3\x00", 4);
 		outFile.write(std::to_string(RG3).c_str(), strlen(std::to_string(RG3).c_str()));
 		outFile.write("\x00", 1);
+		outFile.write("disableClamping\x00", 16);
+		outFile.write(disableClamping ? "1\x00" : "0\x00", 2);
 		outFile.close();
 	}
 	void loadConfig(const std::wstring& configFile) {
@@ -127,6 +130,13 @@ struct ConfigFile {
 							}
 							else if (curRead == "RG3") {
 								RG3 = std::stof(value);
+								curRead = "NONE";
+							}
+							else if (curRead == "disableClamping") {
+								if (value == "0")
+									disableClamping = false;
+								else
+									disableClamping = true;
 								curRead = "NONE";
 							}
 						}

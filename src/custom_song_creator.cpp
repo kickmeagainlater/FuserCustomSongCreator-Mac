@@ -3415,6 +3415,8 @@ void custom_song_creator_update(size_t width, size_t height) {
 			}
 			int idx = 0;
 			for (auto&& cel : gCtx.currentPak->root.celData) {
+				cel.data.clampBPM = !fcsc_cfg.disableClamping;
+				cel.data.songTransitionFile.data.clampBPM = !fcsc_cfg.disableClamping;
 				std::string tabName = "Song Cell " + std::to_string(idx / 2) + " - ";
 				tabName += cel.data.type.getString();
 				tabName += "##Cel" + std::to_string(idx / 2);
@@ -3501,6 +3503,9 @@ void custom_song_creator_update(size_t width, size_t height) {
 		ImGui::Checkbox("Swap borrowed chords when copying?", &fcsc_cfg.swapBorrowedChords);
 		ImGui::SameLine();
 		HelpMarker("If checked, when copying chords from one mode to the other, chords borrowed from the opposite mode will be swapped as well.");
+		ImGui::Checkbox("Disable BPM Clamping?", &fcsc_cfg.disableClamping);
+		ImGui::SameLine();
+		HelpMarker("If checked, BPM clamping will be disabled. May cause issues if disabled but I kept getting asked to disable it so here's an option.");
 		ImGui::Text("Disc default gain values:");
 
 		ImGui::PushItemWidth(125);

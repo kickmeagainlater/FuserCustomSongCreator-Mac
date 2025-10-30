@@ -693,7 +693,7 @@ struct MidiSongAsset {
 
 struct SongTransition {
 	SongPakEntry file;
-
+	bool clampBPM = true;
 	std::string shortName;
 	std::vector<AssetLink<MidiSongAsset>> majorAssets;
 	std::vector<AssetLink<MidiSongAsset>> minorAssets;
@@ -730,9 +730,11 @@ struct SongTransition {
 			ctx.serializeText("Title", ctx.songName);
 
 			i32 bpm = ctx.bpm;
-			while (bpm > 157) bpm = std::ceil(bpm /= 2); //half-time anything faster, recursively
-			if (bpm < 90) bpm = ctx.bpm; //prevent 158-179 bpm from clamping to 90
-			bpm = std::clamp(bpm, 90, 157);
+			if (clampBPM) {
+				while (bpm > 157) bpm = std::ceil(bpm /= 2); //half-time anything faster, recursively
+				if (bpm < 90) bpm = ctx.bpm; //prevent 158-179 bpm from clamping to 90
+				bpm = std::clamp(bpm, 90, 157);
+			}
 			ctx.serializePrimitive("BPM", bpm);
 
 			if (!allUnpitched) {
@@ -841,6 +843,7 @@ struct SongTransition {
 };
 
 struct CelData {
+	bool clampBPM = true;
 	SongPakEntry file;
 	bool tickLengthAdvanced = false;
 	int selectedTickLength = 2;
@@ -951,9 +954,11 @@ struct CelData {
 			ctx.serializeText("Title", ctx.songName);
 			
 			i32 bpm = ctx.bpm;
-			while (bpm > 157) bpm = std::ceil(bpm /= 2); //half-time anything faster, recursively
-			if (bpm < 90) bpm = ctx.bpm; //prevent 158-179 bpm from clamping to 90
-			bpm = std::clamp(bpm, 90, 157);
+			if (clampBPM) {
+				while (bpm > 157) bpm = std::ceil(bpm /= 2); //half-time anything faster, recursively
+				if (bpm < 90) bpm = ctx.bpm; //prevent 158-179 bpm from clamping to 90
+				bpm = std::clamp(bpm, 90, 157);
+			}
 			ctx.serializePrimitive("BPM", bpm);
 
 			

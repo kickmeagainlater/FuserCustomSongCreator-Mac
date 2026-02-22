@@ -1,4 +1,4 @@
-# Fuser Custom Song Creator
+# Fuser Custom Song Creator for Mac
 
 [![.github/workflows/build.yml](https://github.com/NarrikSynthfox/FuserCustomSongCreator/actions/workflows/build.yml/badge.svg)](https://github.com/NarrikSynthfox/FuserCustomSongCreator/actions/workflows/build.yml)
 

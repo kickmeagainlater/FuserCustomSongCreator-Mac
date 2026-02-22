@@ -9,12 +9,12 @@ A small UI to create custom songs for Fuser! Requires [Fuser Song Loader](https:
 ## Building
 
 ```bash
-git clone https://github.com/elenasayshi/FuserCustomSongCreator.git
-cd FuserCustomSongCreator
-./build.bat
+git clone https://github.com/kickmeagainlater/FuserCustomSongCreator-Mac.git
+cd FuserCustomSongCreator-Mac
+./build.sh
 ```
-`Fuser_CustomSongCreator.sln` should be generated under the `FuserCustomSongCreator/build` folder.
+`Fuser_CustomSongCreator` should be generated under the `FuserCustomSongCreator-Mac/build` folder.
 
-## Development repo
+## Original repo
 
-If you want to look at the changes over time between the old version and this one, [here's the dev repository](https://github.com/NarrikSynthfox/FuserCustomSongCreator-dev). I had to make it a separate repo so it could be made private, then on release I forked and uploaded the updated code as a new commit.
+[Here's the dev repo this is based on](https://github.com/NarrikSynthfox/FuserCustomSongCreator-dev). 

@@ -22,7 +22,12 @@ struct ConfigFile {
 	bool disableClamping = false;
 	std::string defaultShortName = "custom_song";
 	void saveConfig(const std::wstring& configFile) {
+#ifdef PLATFORM_MAC
+		std::string _cfpath(configFile.begin(), configFile.end());
+		std::ofstream outFile(_cfpath, std::ios_base::binary);
+#else
 		std::ofstream outFile(configFile, std::ios_base::binary);
+#endif
 		outFile.write("usePercVel\x00", 11);
 		outFile.write(usePercentVelocity ? "1\x00" : "0\x00", 2);
 		outFile.write("defaultShortName\x00", 17);
@@ -62,8 +67,14 @@ struct ConfigFile {
 	}
 	void loadConfig(const std::wstring& configFile) {
 
+#ifdef PLATFORM_MAC
+		std::string _cfpath2(configFile.begin(), configFile.end());
+		if (std::filesystem::exists(_cfpath2)) {
+			std::ifstream inFile(_cfpath2, std::ios_base::binary);
+#else
 		if (std::filesystem::exists(configFile)) {
 			std::ifstream inFile(configFile, std::ios_base::binary);
+#endif
 			if (inFile.is_open()) {
 				std::string value;  // To store each value
 				char byte;  // To read bytes from the file
@@ -157,7 +168,11 @@ struct ConfigFile {
 			}
 		}
 		else {
+#ifdef PLATFORM_MAC
+			saveConfig(std::wstring(_cfpath2.begin(), _cfpath2.end()));
+#else
 			saveConfig(configFile);
+#endif
 		}
 
 

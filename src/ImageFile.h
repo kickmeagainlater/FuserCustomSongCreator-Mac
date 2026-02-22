@@ -6,11 +6,16 @@
 
 #include <string>
 #include <stdint.h>
+#ifdef PLATFORM_MAC
+// Stub D3D11 types so ImageFile.h parses on Mac (display not used on Mac)
+struct ID3D11Device {};
+struct ID3D11ShaderResourceView {};
+#else
 #include <d3d11.h>
+#endif
 #include <imgui/imgui.h>
 #include "stb_image.h"
 #include "stb_image_resize.h"
-
 
 class ImageFile {
 public:

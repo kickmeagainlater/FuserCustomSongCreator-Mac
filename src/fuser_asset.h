@@ -741,7 +741,7 @@ struct SongTransition {
 				ctx.serializeEnum("Key", ctx.songKey);
 			}
 			else {
-				ctx.serializeEnum("Key", std::string("EKey::Num"));
+				{ std::string _enumKeyNum("EKey::Num"); ctx.serializeEnum("Key", _enumKeyNum); }
 			}
 			auto prop = ctx.getOrCreateProp<EnumProperty>("Mode");
 			prop.propData->typeRef = ctx.getHeader().findOrCreateName("EnumProperty");
@@ -966,7 +966,7 @@ struct CelData {
 				ctx.serializeEnum("Key", ctx.songKey);
 			}
 			else {
-				ctx.serializeEnum("Key", std::string("EKey::Num"));
+				{ std::string _enumKeyNum("EKey::Num"); ctx.serializeEnum("Key", _enumKeyNum); }
 			}
 			
 			auto prop = ctx.getOrCreateProp<EnumProperty>("Mode");

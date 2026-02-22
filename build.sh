@@ -20,18 +20,8 @@ if [ ! -f "$ROOT/bass/mac/libbass.dylib" ]; then
 fi
 echo "  libbass.dylib ✓"
 
-# ── 3. Copy ALL port files into src/ ─────────────────────────────────────────
-echo "→ Installing port files..."
-cp "$ROOT/platform.h"    "$ROOT/src/platform.h"
-cp "$ROOT/main.cpp"      "$ROOT/src/main.cpp"
-cp "$ROOT/configfile.h"  "$ROOT/src/configfile.h"
-cp "$ROOT/fuser_asset.h" "$ROOT/src/fuser_asset.h"
-cp "$ROOT/ImageFile.h"   "$ROOT/src/ImageFile.h"
-cp "$ROOT/ImageFile.cpp" "$ROOT/src/ImageFile.cpp"
-cp "$ROOT/DDSFile.h"     "$ROOT/src/DDSFile.h"
-cp "$ROOT/SMF.cpp"            "$ROOT/src/SMF.cpp"
-cp "$ROOT/stream-helpers.cpp" "$ROOT/src/stream-helpers.cpp"
-echo "  platform.h, main.cpp, configfile.h, fuser_asset.h, ImageFile.h/cpp, DDSFile.h, SMF.cpp, stream-helpers.cpp ✓"
+# ── 3. OUTDATED ─────────────────────────────────────────
+
 
 # ── 4. ImGui backends ─────────────────────────────────────────────────────────
 IMGUI_VERSION=$(grep '#define IMGUI_VERSION ' "$ROOT/imgui/imgui.h" | awk '{print $3}' | tr -d '"')

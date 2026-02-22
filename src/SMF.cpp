@@ -1,5 +1,6 @@
 #include <array>
 #include <sstream>
+#include <stdexcept>
 #include <map>
 
 #include "stream-helpers.h"
@@ -70,7 +71,7 @@ TrackEvent ReadEvent(std::istream& stream, uint8_t& running_status) {
         {
         case MetaEventType::SequenceNumber:
             if (length != 2)
-                throw std::exception("Sequence number events must have 2 bytes of data");
+                throw std::runtime_error("Sequence number events must have 2 bytes of data");
             return TrackEvent{ deltaTime, EventType::Meta, MetaEvent(type, read_be<uint16_t>(stream)) };
         case MetaEventType::Text:
         case MetaEventType::CopyrightNotice:
@@ -85,29 +86,29 @@ TrackEvent ReadEvent(std::istream& stream, uint8_t& running_status) {
         case MetaEventType::ChannelPrefix:
         case MetaEventType::Port:
             if (length != 1)
-                throw std::exception("Channel prefix and port events must have 1 byte of data");
+                throw std::runtime_error("Channel prefix and port events must have 1 byte of data");
             return TrackEvent{ deltaTime, EventType::Meta, MetaEvent(type, read_be<uint8_t>(stream)) };
         case MetaEventType::EndOfTrack:
             return TrackEvent{ deltaTime, EventType::Meta, MetaEvent(type) };
         case MetaEventType::TempoEvent:
             if (length != 3)
-                throw std::exception("Tempo events must have 3 bytes of data");
+                throw std::runtime_error("Tempo events must have 3 bytes of data");
             return TrackEvent{ deltaTime, EventType::Meta, MetaEvent(type, read_i24_be(stream)) };
         case MetaEventType::SmpteOffset:
             if (length != 5)
-                throw std::exception("SMTPE Offset events must have 5 bytes of data");
+                throw std::runtime_error("SMTPE Offset events must have 5 bytes of data");
             tmp.resize(5);
             stream.read((char*)tmp.data(), 5);
             return TrackEvent{ deltaTime, EventType::Meta, MetaEvent(type, SmpteOffsetEvent{tmp[0], tmp[1], tmp[2], tmp[3], tmp[4]}) };
         case MetaEventType::TimeSignature:
             if (length != 4)
-                throw std::exception("Time Signature events must have 4 bytes of data");
+                throw std::runtime_error("Time Signature events must have 4 bytes of data");
             tmp.resize(4);
             stream.read((char*)tmp.data(), 4);
             return TrackEvent{ deltaTime, EventType::Meta, MetaEvent(type, TimeSignatureEvent{tmp[0], tmp[1], tmp[2], tmp[3]}) };
         case MetaEventType::KeySignature:
             if (length != 2)
-                throw std::exception("Key Signature events must have 2 bytes of data");
+                throw std::runtime_error("Key Signature events must have 2 bytes of data");
             tmp.resize(2);
             stream.read((char*)tmp.data(), 2);
             return TrackEvent{ deltaTime, EventType::Meta, MetaEvent(type, KeySignatureEvent{tmp[0], tmp[1]}) };
@@ -118,7 +119,7 @@ TrackEvent ReadEvent(std::istream& stream, uint8_t& running_status) {
         default: { // unknown meta event, just skip past it.
             std::ostringstream ss;
             ss << "Unknown meta event type " << std::hex << (int)type << " at 0x" << stream.tellg();
-            throw std::exception(ss.str().c_str());
+            throw std::runtime_error(ss.str().c_str());
         } break;
         }
     }
@@ -143,7 +144,7 @@ TrackEvent ReadEvent(std::istream& stream, uint8_t& running_status) {
 
 MidiTrack ReadTrack(std::istream& stream) {
     if (read_be<int>(stream) != MTrk)
-        throw std::exception("MIDI track not recognized.");
+        throw std::runtime_error("MIDI track not recognized.");
     int64_t track_length = read_be<uint32_t>(stream);
     int64_t total_ticks = 0;
     std::string name;
@@ -167,17 +168,17 @@ MidiTrack ReadTrack(std::istream& stream) {
 MidiFile MidiFile::ReadMidi(std::istream& stream) {
     // "MThd" big-endian, header size always = 6
     if (read_be<int>(stream) != MThd || read_be<int>(stream) != HEADER_SIZE)
-        throw std::exception("MIDI file did not begin with proper MIDI header.");
+        throw std::runtime_error("MIDI file did not begin with proper MIDI header.");
     MidiFormat format = read_be<MidiFormat>(stream);
     if (format > MidiFormat::MultiTrack) {
         std::ostringstream ss;
         ss << "MIDI format " << (int)format << " is not supported by this library.";
-        throw std::exception(ss.str().c_str());
+        throw std::runtime_error(ss.str().c_str());
     }
     auto num_tracks = read_be<uint16_t>(stream);
     uint16_t ticks_per_qn = read_be<uint16_t>(stream);
     if ((ticks_per_qn & 0x8000) == 0x8000)
-        throw std::exception("SMPTE delta time format is not supported by this library.");
+        throw std::runtime_error("SMPTE delta time format is not supported by this library.");
 
     std::vector<MidiTrack> tracks;
     for (int i = 0; i < num_tracks; i++)

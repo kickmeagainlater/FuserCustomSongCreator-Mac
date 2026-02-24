@@ -20,8 +20,18 @@ if [ ! -f "$ROOT/bass/mac/libbass.dylib" ]; then
 fi
 echo "  libbass.dylib ✓"
 
-# ── 3. OUTDATED ─────────────────────────────────────────
-
+# ── 3. Copy ALL port files into src/ ─────────────────────────────────────────
+echo "→ Installing port files..."
+cp "$ROOT/platform.h"    "$ROOT/src/platform.h"
+cp "$ROOT/main.cpp"      "$ROOT/src/main.cpp"
+cp "$ROOT/configfile.h"  "$ROOT/src/configfile.h"
+cp "$ROOT/fuser_asset.h" "$ROOT/src/fuser_asset.h"
+cp "$ROOT/ImageFile.h"   "$ROOT/src/ImageFile.h"
+cp "$ROOT/ImageFile.cpp" "$ROOT/src/ImageFile.cpp"
+cp "$ROOT/DDSFile.h"     "$ROOT/src/DDSFile.h"
+cp "$ROOT/SMF.cpp"            "$ROOT/src/SMF.cpp"
+cp "$ROOT/stream-helpers.cpp" "$ROOT/src/stream-helpers.cpp"
+echo "  platform.h, main.cpp, configfile.h, fuser_asset.h, ImageFile.h/cpp, DDSFile.h, SMF.cpp, stream-helpers.cpp ✓"
 
 # ── 4. ImGui backends ─────────────────────────────────────────────────────────
 IMGUI_VERSION=$(grep '#define IMGUI_VERSION ' "$ROOT/imgui/imgui.h" | awk '{print $3}' | tr -d '"')
@@ -208,3 +218,23 @@ ninja -j"$(sysctl -n hw.logicalcpu)"
 echo ""
 echo "✅ Done! Binary: $ROOT/build/Fuser_CustomSongCreator"
 echo "Run from the repo root: ./build/Fuser_CustomSongCreator"
+
+# ── 8. Package for distribution ───────────────────────────────────────────────
+# Produces dist/FuserCustomSongCreator-mac.zip — copy to any Mac and run.
+# GLFW is statically linked so the only bundled dependency is libbass.dylib.
+DIST="$ROOT/dist/FuserCustomSongCreator"
+rm -rf "$DIST"
+mkdir -p "$DIST"
+cp "$ROOT/build/Fuser_CustomSongCreator" "$DIST/"
+cp "$ROOT/bass/mac/libbass.dylib"        "$DIST/"
+# Ensure rpath is set on the copy (CMake already sets it, this is a safety net)
+install_name_tool -add_rpath "@executable_path" "$DIST/Fuser_CustomSongCreator" 2>/dev/null || true
+cd "$ROOT/dist"
+zip -r FuserCustomSongCreator-mac.zip FuserCustomSongCreator/
+echo ""
+echo "📦 $ROOT/dist/FuserCustomSongCreator-mac.zip"
+echo "   → Fuser_CustomSongCreator  (keep both files in the same folder)"
+echo "   → libbass.dylib"
+echo ""
+echo "If macOS blocks the app on the target machine:"
+echo "   xattr -cr /path/to/Fuser_CustomSongCreator"

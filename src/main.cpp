@@ -128,33 +128,42 @@ int main(int argc, char** argv)
     // HiDPI: rasterize fonts at native framebuffer pixel density and
     // compensate logical size with FontGlobalScale, so text stays crisp on
     // Retina displays instead of being upscaled by GL.
-    float dpi_scale = 1.0f;
-    {
+    auto current_scale = [&]() {
         float xs = 1.0f, ys = 1.0f;
         glfwGetWindowContentScale(window, &xs, &ys);
-        if (xs > 0.0f) dpi_scale = xs;
-    }
+        return xs > 0.0f ? xs : 1.0f;
+    };
+    float dpi_scale = current_scale();
 
-    // Load fonts – fall back gracefully on Mac
-    const char* monoFont = FindMonoFont();
-    if (monoFont) {
-        ImFontConfig cfg;
-        io.Fonts->AddFontFromFileTTF(monoFont, 14.0f * dpi_scale);
-        // Add CJK/Korean ranges via a system CJK font if available
-        const char* cjkFont = "/System/Library/Fonts/PingFang.ttc";
-        if (std::filesystem::exists(cjkFont)) {
-            cfg.MergeMode = true;
-            io.Fonts->AddFontFromFileTTF(cjkFont, 16.0f * dpi_scale, &cfg,
-                io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
-            io.Fonts->AddFontFromFileTTF(cjkFont, 16.0f * dpi_scale, &cfg,
-                io.Fonts->GetGlyphRangesJapanese());
-            io.Fonts->AddFontFromFileTTF(cjkFont, 16.0f * dpi_scale, &cfg,
-                io.Fonts->GetGlyphRangesKorean());
+    auto reload_fonts = [&](float scale) {
+        io.Fonts->Clear();
+        const char* monoFont = FindMonoFont();
+        if (monoFont) {
+            ImFontConfig cfg;
+            io.Fonts->AddFontFromFileTTF(monoFont, 14.0f * scale);
+            const char* cjkFont = "/System/Library/Fonts/PingFang.ttc";
+            if (std::filesystem::exists(cjkFont)) {
+                cfg.MergeMode = true;
+                io.Fonts->AddFontFromFileTTF(cjkFont, 16.0f * scale, &cfg,
+                    io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+                io.Fonts->AddFontFromFileTTF(cjkFont, 16.0f * scale, &cfg,
+                    io.Fonts->GetGlyphRangesJapanese());
+                io.Fonts->AddFontFromFileTTF(cjkFont, 16.0f * scale, &cfg,
+                    io.Fonts->GetGlyphRangesKorean());
+            }
+            io.Fonts->Build();
         }
-        io.Fonts->Build();
-    }
-    io.FontGlobalScale = 1.0f / dpi_scale;
-    // If no font found, ImGui uses its built-in default – still works fine.
+        io.FontGlobalScale = 1.0f / scale;
+    };
+    reload_fonts(dpi_scale);
+
+    // Drag the window between Retina and an external 1× monitor and the
+    // content scale changes — flag a rebuild for the next frame so text
+    // stays crisp at the new pixel density.
+    static bool dpi_dirty = false;
+    glfwSetWindowContentScaleCallback(window, [](GLFWwindow*, float, float) {
+        dpi_dirty = true;
+    });
 
     ImVec4 clear = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
@@ -163,6 +172,13 @@ int main(int argc, char** argv)
         // Block until input arrives (or 100ms passes for animations).
         // Avoids a 60fps spin loop that pegs CPU/GPU when the UI is idle.
         glfwWaitEventsTimeout(0.1);
+
+        if (dpi_dirty) {
+            dpi_dirty = false;
+            dpi_scale = current_scale();
+            reload_fonts(dpi_scale);
+            ImGui_ImplOpenGL3_DestroyFontsTexture();
+        }
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();

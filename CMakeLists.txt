@@ -53,7 +53,6 @@ set(SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/flac_to_ogg.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_demo.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_draw.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_widgets.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_stdlib.cpp

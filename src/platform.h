@@ -203,19 +203,16 @@ inline std::string _PlatSaveDialog(const char* filter, const char* title) {
     return buf;
 }
 
-// Synchronous wrappers – CALL FROM A BACKGROUND THREAD ONLY
+// Synchronous wrappers. The previous implementation spawned a detached
+// thread that wrote into stack-locals via reference and then spin-waited
+// on an atomic — a leak waiting for one of those wakeups to be late.
+// _PlatOpenDialog/_PlatSaveDialog already block (they popen zenity) so
+// the thread was never doing real work, just gating the call. Just
+// invoke directly: blocks the caller until the user picks a file, which
+// is exactly the desired Win32 behavior.
 inline bool GetOpenFileNameA(OPENFILENAME* ofn) {
     if (!ofn || !ofn->lpstrFile) return false;
-    // Run dialog on this (background) thread
-    std::string result;
-    std::atomic<bool> done{false};
-    std::thread([&]{
-        result = _PlatOpenDialog(ofn->lpstrFilter, ofn->lpstrTitle);
-        done.store(true, std::memory_order_release);
-    }).detach();
-    while (!done.load(std::memory_order_acquire)) {
-        struct timespec ts{0, 16000000}; nanosleep(&ts, nullptr);
-    }
+    std::string result = _PlatOpenDialog(ofn->lpstrFilter, ofn->lpstrTitle);
     if (result.empty()) return false;
     strncpy(ofn->lpstrFile, result.c_str(), ofn->nMaxFile - 1);
     return true;
@@ -223,15 +220,7 @@ inline bool GetOpenFileNameA(OPENFILENAME* ofn) {
 
 inline bool GetSaveFileNameA(OPENFILENAME* ofn) {
     if (!ofn || !ofn->lpstrFile) return false;
-    std::string result;
-    std::atomic<bool> done{false};
-    std::thread([&]{
-        result = _PlatSaveDialog(ofn->lpstrFilter, ofn->lpstrTitle);
-        done.store(true, std::memory_order_release);
-    }).detach();
-    while (!done.load(std::memory_order_acquire)) {
-        struct timespec ts{0, 16000000}; nanosleep(&ts, nullptr);
-    }
+    std::string result = _PlatSaveDialog(ofn->lpstrFilter, ofn->lpstrTitle);
     if (result.empty()) return false;
     strncpy(ofn->lpstrFile, result.c_str(), ofn->nMaxFile - 1);
     return true;

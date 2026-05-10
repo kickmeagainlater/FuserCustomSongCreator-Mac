@@ -101,8 +101,8 @@ with open(path, 'w') as f:
     f.write(content)
 PYEOF
 
-# Guard Windows-only headers in custom_song_creator.cpp and uasset.h
-for f in "$ROOT/src/custom_song_creator.cpp" "$ROOT/src/uasset.h"; do
+# Guard Windows-only headers in custom_song_creator.cpp, uasset.h, fuser_asset.cpp
+for f in "$ROOT/src/custom_song_creator.cpp" "$ROOT/src/uasset.h" "$ROOT/src/fuser_asset.cpp"; do
     [ -f "$f" ] || continue
     for hdr in "Windows.h" "shlwapi.h" "ShlObj.h" "dinput.h" "tchar.h"; do
         if grep -q "#include <${hdr}>" "$f" && \
@@ -181,6 +181,26 @@ with open(path, 'w') as f:
     f.write(content)
 INNEREOF
 echo "  custom_song_creator.cpp ✓"
+
+# DDSFile.cpp: inject platform.h for __debugbreak shim, replace
+# basic_ofstream<uint8_t> (no codecvt on libc++) with std::ofstream + char casts
+DDS="$ROOT/src/DDSFile.cpp"
+DDSH="$ROOT/src/DDSFile.h"
+if [ -f "$DDS" ]; then
+    grep -q 'platform.h' "$DDS" || \
+        sed -i.bak '1s/^/#ifdef PLATFORM_MAC\n#include "platform.h"\n#endif\n/' "$DDS"
+    sed -i.bak 's|std::basic_ofstream<uint8_t>|std::ofstream|g' "$DDS"
+    sed -i.bak 's|outputFile.write((uint8_t\*)|outputFile.write((const char*)|g' "$DDS"
+fi
+if [ -f "$DDSH" ]; then
+    sed -i.bak 's|std::basic_ofstream<uint8_t>|std::ofstream|g' "$DDSH"
+fi
+
+# fuser_asset.cpp: %d printf'ing std::vector<u8> (clang error on Mac)
+FA="$ROOT/src/fuser_asset.cpp"
+if [ -f "$FA" ]; then
+    sed -i.bak 's|"Unknown Property (Length %d)", v.data|"Unknown Property (Length %d)", (int)v.data.size()|' "$FA"
+fi
 
 # SMF.cpp + stream-helpers.cpp: fix std::exception("msg") -> std::runtime_error("msg")
 for SMF_FILE in "$ROOT/src/SMF.cpp" "$ROOT/src/stream-helpers.cpp"; do

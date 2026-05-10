@@ -42,6 +42,7 @@ set(SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/src/hmx_midifile.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/src/custom_song_creator.cpp
     $<$<BOOL:${PLATFORM_MAC}>:${CMAKE_CURRENT_SOURCE_DIR}/src/ImageFile.cpp>
+    $<$<BOOL:${PLATFORM_MAC}>:${CMAKE_CURRENT_SOURCE_DIR}/src/DDSFile.cpp>
 
     ${CMAKE_CURRENT_SOURCE_DIR}/moggcrypt/aes.c
     ${CMAKE_CURRENT_SOURCE_DIR}/moggcrypt/CCallbacks.cpp

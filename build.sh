@@ -6,7 +6,7 @@ echo "── Fuser Custom Song Creator – macOS build ────────�
 
 # ── 1. Dependencies ───────────────────────────────────────────────────────────
 echo "→ Checking Homebrew dependencies..."
-for pkg in cmake ninja glfw zenity; do
+for pkg in cmake ninja glfw zenity flac libvorbis libogg; do
     brew list "$pkg" &>/dev/null || brew install "$pkg"
     echo "  $pkg ✓"
 done

@@ -23,6 +23,7 @@ namespace fs = std::filesystem;
 #include "stb_image_resize.h"
 #include "moggcrypt/CCallbacks.h"
 #include "moggcrypt/VorbisEncrypter.h"
+#include "flac_to_ogg.h"
 
 #include "fuser_asset.h"
 
@@ -791,10 +792,34 @@ void display_mogg_settings(FusionFileAsset& fusionFile, size_t idx, HmxAudio::Pa
 	}
 
 	if (ImGui::Button(buttonText.c_str())) {
-		auto moggFile = OpenFile("Ogg file (*.ogg)\0*.ogg\0");
+		auto moggFile = OpenFile("Audio file (*.ogg, *.flac)\0*.ogg;*.flac\0");
 		if (moggFile) {
 			std::string fPath = *moggFile;
-			std::ifstream infile(fPath, std::ios_base::binary);
+
+			// If the user picked a FLAC file, transcode to Ogg Vorbis on-the-fly
+			// and write the result to a temp file so we can feed it to VorbisEncrypter
+			// (which expects a seekable std::ifstream).
+			std::string streamPath = fPath;
+			std::string tmpOggPath;
+			bool isFlac = endsWith(fPath, ".flac") || endsWith(fPath, ".FLAC");
+			bool conversionFailed = false;
+			if (isFlac) {
+				std::vector<u8> oggBytes;
+				std::string convErr;
+				if (!convertFlacToOggVorbis(fPath, oggBytes, convErr)) {
+					lastMoggError = "FLAC conversion failed: " + convErr;
+					ImGui::OpenPopup("Ogg loading error");
+					conversionFailed = true;
+				} else {
+					tmpOggPath = (fs::temp_directory_path() / ("fcsc_flac_" + std::to_string((uint64_t)&mogg) + ".ogg")).string();
+					std::ofstream tmp(tmpOggPath, std::ios_base::binary | std::ios_base::trunc);
+					tmp.write(reinterpret_cast<const char*>(oggBytes.data()), oggBytes.size());
+					tmp.close();
+					streamPath = tmpOggPath;
+				}
+			}
+
+			std::ifstream infile(conversionFailed ? std::string() : streamPath, std::ios_base::binary);
 			std::vector<u8> fileData = std::vector<u8>(std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>());
 			std::vector<u8> outData;
 
@@ -840,6 +865,11 @@ void display_mogg_settings(FusionFileAsset& fusionFile, size_t idx, HmxAudio::Pa
 			}
 			else {
 				ImGui::OpenPopup("Ogg loading error");
+			}
+
+			if (!tmpOggPath.empty()) {
+				std::error_code ec;
+				fs::remove(tmpOggPath, ec);
 			}
 		}
 	}

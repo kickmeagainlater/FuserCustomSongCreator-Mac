@@ -49,6 +49,8 @@ set(SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/moggcrypt/oggvorbis.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/moggcrypt/VorbisEncrypter.cpp
 
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/flac_to_ogg.cpp
+
     ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_demo.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/imgui/imgui_draw.cpp
@@ -116,8 +118,28 @@ if(APPLE)
             "Place libbass.dylib in: ${CMAKE_CURRENT_SOURCE_DIR}/bass/mac/")
     endif()
 
+    # FLAC + Vorbis (for transcoding FLAC input to Ogg Vorbis before mogg encryption)
+    find_path(FLAC_INCLUDE_DIR FLAC/stream_decoder.h
+        PATHS /opt/homebrew/include /usr/local/include NO_DEFAULT_PATH)
+    find_library(FLAC_LIB FLAC
+        PATHS /opt/homebrew/lib /usr/local/lib NO_DEFAULT_PATH)
+    find_library(VORBIS_LIB vorbis
+        PATHS /opt/homebrew/lib /usr/local/lib NO_DEFAULT_PATH)
+    find_library(VORBISENC_LIB vorbisenc
+        PATHS /opt/homebrew/lib /usr/local/lib NO_DEFAULT_PATH)
+    find_library(OGG_LIB ogg
+        PATHS /opt/homebrew/lib /usr/local/lib NO_DEFAULT_PATH)
+    if(NOT FLAC_LIB OR NOT VORBIS_LIB OR NOT VORBISENC_LIB OR NOT OGG_LIB)
+        message(FATAL_ERROR "Missing FLAC/Vorbis/Ogg libs. Install with: brew install flac libvorbis libogg")
+    endif()
+    target_include_directories(${PROJECT_NAME} PRIVATE ${FLAC_INCLUDE_DIR})
+
     target_link_libraries(${PROJECT_NAME}
         ${BASS_LIB}
+        ${FLAC_LIB}
+        ${VORBISENC_LIB}
+        ${VORBIS_LIB}
+        ${OGG_LIB}
         OpenGL::GL
         ${GLFW_LINK_TARGET}
         "-framework Cocoa"

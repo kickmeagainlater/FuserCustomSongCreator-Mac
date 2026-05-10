@@ -163,7 +163,12 @@ inline std::string _PlatOpenDialog(const char* filter, const char* title) {
         std::string ext = _PlatExtFromFilter(filter);
         std::string cmd = "zenity --file-selection";
         if (title) cmd += std::string(" --title='") + title + "'";
-        if (!ext.empty()) cmd += " --file-filter='*" + ext + "'";
+        if (!ext.empty()) {
+            // Support multi-pattern filters like ".ogg;*.flac" → "*.ogg *.flac"
+            std::string pattern = "*" + ext;
+            for (auto& c : pattern) if (c == ';') c = ' ';
+            cmd += " --file-filter='" + pattern + "'";
+        }
         cmd += " 2>/dev/null";
         return _PlatRunCmd(cmd);
     }

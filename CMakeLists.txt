@@ -184,6 +184,14 @@ if(APPLE)
         COMMENT "Bundling libbass.dylib next to executable"
     )
 
+    # Bundle Homebrew dylibs (FLAC, Vorbis, Ogg) into the .app so the binary
+    # runs on Macs without `brew install flac libvorbis libogg`.
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND bash "${CMAKE_CURRENT_SOURCE_DIR}/cmake/bundle_macos.sh"
+            "$<TARGET_FILE:${PROJECT_NAME}>"
+        COMMENT "Bundling FLAC/Vorbis/Ogg dylibs"
+    )
+
 elseif(WIN32)
     target_link_libraries(${PROJECT_NAME}
         "d3d11.lib"

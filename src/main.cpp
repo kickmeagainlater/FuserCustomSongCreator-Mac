@@ -160,7 +160,9 @@ int main(int argc, char** argv)
 
     while (!glfwWindowShouldClose(window))
     {
-        glfwPollEvents();
+        // Block until input arrives (or 100ms passes for animations).
+        // Avoids a 60fps spin loop that pegs CPU/GPU when the UI is idle.
+        glfwWaitEventsTimeout(0.1);
 
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();

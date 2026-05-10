@@ -6,7 +6,7 @@ echo "── Fuser Custom Song Creator – macOS build ────────�
 
 # ── 1. Dependencies ───────────────────────────────────────────────────────────
 echo "→ Checking Homebrew dependencies..."
-for pkg in cmake ninja glfw zenity flac libvorbis libogg; do
+for pkg in cmake ninja glfw zenity flac libvorbis libogg imagemagick; do
     brew list "$pkg" &>/dev/null || brew install "$pkg"
     echo "  $pkg ✓"
 done
@@ -225,6 +225,25 @@ echo "  SMF.cpp + stream-helpers.cpp ✓"
 
 echo "  src/ ✓"
 
+# ── 6b. App icon (.icns) for the .app bundle ──────────────────────────────────
+ICNS="$ROOT/res/AppIcon.icns"
+ICO="$ROOT/res/icon.ico"
+if [ -f "$ICO" ] && [ ! -f "$ICNS" -o "$ICO" -nt "$ICNS" ]; then
+    echo "→ Generating AppIcon.icns from icon.ico..."
+    ICONSET="$ROOT/build/AppIcon.iconset"
+    rm -rf "$ICONSET"; mkdir -p "$ICONSET"
+    magick "${ICO}[0]" "$ICONSET/source.png"
+    for entry in "16:16x16" "32:16x16@2x" "32:32x32" "64:32x32@2x" \
+                 "128:128x128" "256:128x128@2x" "256:256x256" "512:256x256@2x" \
+                 "512:512x512" "1024:512x512@2x"; do
+        sz="${entry%%:*}"; name="${entry##*:}"
+        sips -z "$sz" "$sz" "$ICONSET/source.png" --out "$ICONSET/icon_${name}.png" >/dev/null
+    done
+    rm "$ICONSET/source.png"
+    iconutil -c icns "$ICONSET" -o "$ICNS"
+    echo "  AppIcon.icns ✓"
+fi
+
 # ── 7. Configure & build ──────────────────────────────────────────────────────
 
 echo "→ Configuring..."
@@ -236,25 +255,20 @@ echo "→ Building..."
 ninja -j"$(sysctl -n hw.logicalcpu)"
 
 echo ""
-echo "✅ Done! Binary: $ROOT/build/Fuser_CustomSongCreator"
-echo "Run from the repo root: ./build/Fuser_CustomSongCreator"
+APP_BUNDLE="$ROOT/build/Fuser Custom Song Creator.app"
+echo "✅ Done! App bundle: $APP_BUNDLE"
+echo "Open with: open \"$APP_BUNDLE\""
 
 # ── 8. Package for distribution ───────────────────────────────────────────────
-# Produces dist/FuserCustomSongCreator-mac.zip — copy to any Mac and run.
-# GLFW is statically linked so the only bundled dependency is libbass.dylib.
-DIST="$ROOT/dist/FuserCustomSongCreator"
-rm -rf "$DIST"
-mkdir -p "$DIST"
-cp "$ROOT/build/Fuser_CustomSongCreator" "$DIST/"
-cp "$ROOT/bass/mac/libbass.dylib"        "$DIST/"
-# Ensure rpath is set on the copy (CMake already sets it, this is a safety net)
-install_name_tool -add_rpath "@executable_path" "$DIST/Fuser_CustomSongCreator" 2>/dev/null || true
+# Produces dist/FuserCustomSongCreator-mac.zip containing the .app bundle.
+# Double-click to launch — no terminal, with icon. libbass.dylib is bundled.
+rm -rf "$ROOT/dist"
+mkdir -p "$ROOT/dist"
+cp -R "$APP_BUNDLE" "$ROOT/dist/"
 cd "$ROOT/dist"
-zip -r FuserCustomSongCreator-mac.zip FuserCustomSongCreator/
+zip -qr FuserCustomSongCreator-mac.zip "Fuser Custom Song Creator.app"
 echo ""
 echo "📦 $ROOT/dist/FuserCustomSongCreator-mac.zip"
-echo "   → Fuser_CustomSongCreator  (keep both files in the same folder)"
-echo "   → libbass.dylib"
 echo ""
-echo "If macOS blocks the app on the target machine:"
-echo "   xattr -cr /path/to/Fuser_CustomSongCreator"
+echo "If macOS Gatekeeper blocks the app on the target machine:"
+echo "   xattr -cr \"/Applications/Fuser Custom Song Creator.app\""

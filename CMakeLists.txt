@@ -83,7 +83,24 @@ list(APPEND SRCS ${CMAKE_CURRENT_SOURCE_DIR}/src/stream-helpers.cpp)
 
 # ── Executable ────────────────────────────────────────────────────────────────
 if(WIN32)
-add_executable(${PROJECT_NAME} WIN32 ${SRCS})
+    add_executable(${PROJECT_NAME} WIN32 ${SRCS})
+elseif(APPLE)
+    set(APP_ICON "${CMAKE_CURRENT_SOURCE_DIR}/res/AppIcon.icns")
+    if(EXISTS "${APP_ICON}")
+        set_source_files_properties("${APP_ICON}" PROPERTIES
+            MACOSX_PACKAGE_LOCATION "Resources")
+        list(APPEND SRCS "${APP_ICON}")
+    endif()
+    add_executable(${PROJECT_NAME} MACOSX_BUNDLE ${SRCS})
+    set_target_properties(${PROJECT_NAME} PROPERTIES
+        OUTPUT_NAME "Fuser Custom Song Creator"
+        MACOSX_BUNDLE_BUNDLE_NAME "Fuser Custom Song Creator"
+        MACOSX_BUNDLE_GUI_IDENTIFIER "com.kickmeagainlater.fusercustomsongcreator"
+        MACOSX_BUNDLE_BUNDLE_VERSION "2.1.6.1"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "2.1.6.1"
+        MACOSX_BUNDLE_ICON_FILE "AppIcon.icns"
+        MACOSX_BUNDLE_COPYRIGHT "MIT"
+    )
 else()
     add_executable(${PROJECT_NAME} ${SRCS})
 endif()

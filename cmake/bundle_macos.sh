@@ -85,12 +85,24 @@ if ! otool -l "$BIN" | grep -A2 LC_RPATH | grep -q "@executable_path"; then
     install_name_tool -add_rpath "@executable_path" "$BIN" 2>/dev/null || true
 fi
 
+# Compute the bundle root: BIN is .../X.app/Contents/MacOS/X
+BUNDLE="$(cd "$DEST/../.." && pwd)"
+PLIST="$BUNDLE/Contents/Info.plist"
+
+# Info.plist: keys CMake's MACOSX_BUNDLE_* properties don't expose. These
+# matter for proper Retina rendering, App Store-style metadata, and Finder
+# behavior when the app is dragged out of /Applications.
+plist_set() {
+    local key="$1"; local type="$2"; local value="$3"
+    /usr/libexec/PlistBuddy -c "Add :$key $type $value" "$PLIST" 2>/dev/null \
+        || /usr/libexec/PlistBuddy -c "Set :$key $value" "$PLIST"
+}
+plist_set NSHighResolutionCapable      bool   true
+plist_set LSMinimumSystemVersion       string 11.0
+plist_set LSApplicationCategoryType    string public.app-category.music
+plist_set NSPrincipalClass             string NSApplication
+
 # install_name_tool invalidates ad-hoc signatures — re-sign or AMFI kills
-# the process on launch with SIGKILL. Sign deps before the main binary so
-# its signature can validate them as subcomponents.
-for lib in "${BUNDLED[@]}"; do
-    codesign --force --sign - "$DEST/$lib"
-done
-# libbass was install_name_tool'd by CMake's earlier POST_BUILD step.
-[ -f "$DEST/libbass.dylib" ] && codesign --force --sign - "$DEST/libbass.dylib"
-codesign --force --sign - "$BIN"
+# the process on launch with SIGKILL. Signing the bundle root with --deep
+# walks every Mach-O inside (binary + dylibs) and re-signs in one pass.
+codesign --force --deep --sign - "$BUNDLE"

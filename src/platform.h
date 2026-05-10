@@ -96,17 +96,11 @@ inline void ShellExecuteA(HWND, const char*, const char* file,
 #define ShellExecute  ShellExecuteA
 #define SW_SHOW 5
 
-// ── File dialog via Zenity (no AppleScript deadlock) ─────────────────────────
-// osascript's `choose file` deadlocks when called from a non-main thread AND
-// can hang indefinitely waiting for Automation permission on newer macOS.
-// Zenity is a GTK dialog runner that works fine from any thread.
-// Install: brew install zenity
-// Falls back to a plain terminal prompt if zenity is not available.
-//
-// These run SYNCHRONOUSLY on a BACKGROUND THREAD.
-// The Windows-style GetOpenFileName/GetSaveFileName macros call the async
-// wrappers which spin-wait – acceptable since the user is interacting with
-// Finder and the app being "paused" is normal expected behaviour.
+// ── File dialogs via osascript (native macOS Finder panels) ──────────────────
+// Uses `choose file` / `choose file name` — shows a real Finder open/save
+// sheet. No Automation permission required (Standard Additions, not app
+// control). Blocks the caller until the user dismisses the dialog, which
+// matches Win32 GetOpenFileName / GetSaveFileName semantics.
 // ─────────────────────────────────────────────────────────────────────────────
 
 #define OFN_PATHMUSTEXIST   0x0800
@@ -128,16 +122,7 @@ struct OPENFILENAME {
     const CHAR*  lpstrInitialDir = nullptr;
 };
 
-// Parse first *.ext from Win32 filter "Desc\0*.ext\0All\0*.*\0"
-inline std::string _PlatExtFromFilter(const char* f) {
-    if (!f) return "";
-    while (*f) f++; f++;        // skip description
-    std::string p(f);
-    auto s = p.find('*');
-    return s != std::string::npos ? p.substr(s + 1) : ""; // e.g. ".mogg"
-}
-
-// Run a shell command and return trimmed stdout, "" on failure/cancel
+// Run a shell command and return trimmed first line of stdout, "" on failure.
 inline std::string _PlatRunCmd(const std::string& cmd) {
     FILE* p = popen(cmd.c_str(), "r");
     if (!p) return "";
@@ -150,71 +135,52 @@ inline std::string _PlatRunCmd(const std::string& cmd) {
     return buf;
 }
 
-// Check if zenity is available
-inline bool _PlatHasZenity() {
-    static int cached = -1;
-    if (cached == -1)
-        cached = (system("command -v zenity >/dev/null 2>&1") == 0) ? 1 : 0;
-    return cached == 1;
+// Build an osascript `of type` list from a Win32 filter string.
+// "Audio\0*.ogg;*.flac\0\0"  →  {"ogg","flac"}
+// Returns "" when no specific types (pass-through = any file).
+inline std::string _OsaTypeList(const char* f) {
+    if (!f) return "";
+    while (*f) f++; f++;  // skip description field
+    std::string result;
+    for (const char* p = f; *p; ) {
+        if (*p == '*' && *(p+1) == '.') {
+            p += 2;
+            std::string ext;
+            while (*p && *p != ';') ext += *p++;
+            if (!ext.empty() && ext != "*") {
+                if (!result.empty()) result += ", ";
+                result += "\"" + ext + "\"";
+            }
+        } else { ++p; }
+    }
+    return result.empty() ? "" : "{" + result + "}";
 }
 
+// Open-file dialog — returns selected POSIX path or "" on cancel.
 inline std::string _PlatOpenDialog(const char* filter, const char* title) {
-    if (_PlatHasZenity()) {
-        std::string ext = _PlatExtFromFilter(filter);
-        std::string cmd = "zenity --file-selection";
-        if (title) cmd += std::string(" --title='") + title + "'";
-        if (!ext.empty()) {
-            // Support multi-pattern filters like ".ogg;*.flac" → "*.ogg *.flac"
-            std::string pattern = "*" + ext;
-            for (auto& c : pattern) if (c == ';') c = ' ';
-            cmd += " --file-filter='" + pattern + "'";
-        }
-        cmd += " 2>/dev/null";
-        return _PlatRunCmd(cmd);
-    }
-    // Fallback: prompt in terminal
-    fprintf(stderr, "Enter file path: ");
-    char buf[MAX_PATH] = {};
-    if (!fgets(buf, sizeof(buf), stdin)) return "";
-    size_t n = strlen(buf);
-    if (n && buf[n-1] == '\n') buf[n-1] = '\0';
-    return buf;
+    std::string script = "POSIX path of (choose file";
+    if (title && *title) script += std::string(" with prompt \"") + title + "\"";
+    std::string types = _OsaTypeList(filter);
+    if (!types.empty()) script += " of type " + types;
+    script += ")";
+    return _PlatRunCmd("osascript -e '" + script + "' 2>/dev/null");
 }
 
+// Save-file dialog — returns chosen POSIX path or "" on cancel.
 inline std::string _PlatSaveDialog(const char* filter, const char* title) {
-    if (_PlatHasZenity()) {
-        std::string ext = _PlatExtFromFilter(filter);
-        std::string cmd = "zenity --file-selection --save --confirm-overwrite";
-        if (title) cmd += std::string(" --title='") + title + "'";
-        if (!ext.empty()) {
-            // Support multi-pattern filters like ".ogg;*.flac" → "*.ogg *.flac"
-            std::string pattern = "*" + ext;
-            for (auto& c : pattern) if (c == ';') c = ' ';
-            cmd += " --file-filter='" + pattern + "'";
-        }
-        cmd += " 2>/dev/null";
-        return _PlatRunCmd(cmd);
-    }
-    fprintf(stderr, "Enter save path: ");
-    char buf[MAX_PATH] = {};
-    if (!fgets(buf, sizeof(buf), stdin)) return "";
-    size_t n = strlen(buf);
-    if (n && buf[n-1] == '\n') buf[n-1] = '\0';
-    return buf;
+    (void)filter;
+    std::string script = "POSIX path of (choose file name";
+    if (title && *title) script += std::string(" with prompt \"") + title + "\"";
+    script += ")";
+    return _PlatRunCmd("osascript -e '" + script + "' 2>/dev/null");
 }
 
-// Synchronous wrappers. The previous implementation spawned a detached
-// thread that wrote into stack-locals via reference and then spin-waited
-// on an atomic — a leak waiting for one of those wakeups to be late.
-// _PlatOpenDialog/_PlatSaveDialog already block (they popen zenity) so
-// the thread was never doing real work, just gating the call. Just
-// invoke directly: blocks the caller until the user picks a file, which
-// is exactly the desired Win32 behavior.
 inline bool GetOpenFileNameA(OPENFILENAME* ofn) {
     if (!ofn || !ofn->lpstrFile) return false;
     std::string result = _PlatOpenDialog(ofn->lpstrFilter, ofn->lpstrTitle);
     if (result.empty()) return false;
     strncpy(ofn->lpstrFile, result.c_str(), ofn->nMaxFile - 1);
+    ofn->lpstrFile[ofn->nMaxFile - 1] = '\0';
     return true;
 }
 
@@ -223,6 +189,7 @@ inline bool GetSaveFileNameA(OPENFILENAME* ofn) {
     std::string result = _PlatSaveDialog(ofn->lpstrFilter, ofn->lpstrTitle);
     if (result.empty()) return false;
     strncpy(ofn->lpstrFile, result.c_str(), ofn->nMaxFile - 1);
+    ofn->lpstrFile[ofn->nMaxFile - 1] = '\0';
     return true;
 }
 

@@ -125,24 +125,35 @@ int main(int argc, char** argv)
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 150");
 
+    // HiDPI: rasterize fonts at native framebuffer pixel density and
+    // compensate logical size with FontGlobalScale, so text stays crisp on
+    // Retina displays instead of being upscaled by GL.
+    float dpi_scale = 1.0f;
+    {
+        float xs = 1.0f, ys = 1.0f;
+        glfwGetWindowContentScale(window, &xs, &ys);
+        if (xs > 0.0f) dpi_scale = xs;
+    }
+
     // Load fonts – fall back gracefully on Mac
     const char* monoFont = FindMonoFont();
     if (monoFont) {
         ImFontConfig cfg;
-        io.Fonts->AddFontFromFileTTF(monoFont, 14.0f);
+        io.Fonts->AddFontFromFileTTF(monoFont, 14.0f * dpi_scale);
         // Add CJK/Korean ranges via a system CJK font if available
         const char* cjkFont = "/System/Library/Fonts/PingFang.ttc";
         if (std::filesystem::exists(cjkFont)) {
             cfg.MergeMode = true;
-            io.Fonts->AddFontFromFileTTF(cjkFont, 16.0f, &cfg,
+            io.Fonts->AddFontFromFileTTF(cjkFont, 16.0f * dpi_scale, &cfg,
                 io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
-            io.Fonts->AddFontFromFileTTF(cjkFont, 16.0f, &cfg,
+            io.Fonts->AddFontFromFileTTF(cjkFont, 16.0f * dpi_scale, &cfg,
                 io.Fonts->GetGlyphRangesJapanese());
-            io.Fonts->AddFontFromFileTTF(cjkFont, 16.0f, &cfg,
+            io.Fonts->AddFontFromFileTTF(cjkFont, 16.0f * dpi_scale, &cfg,
                 io.Fonts->GetGlyphRangesKorean());
         }
         io.Fonts->Build();
     }
+    io.FontGlobalScale = 1.0f / dpi_scale;
     // If no font found, ImGui uses its built-in default – still works fine.
 
     ImVec4 clear = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);

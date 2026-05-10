@@ -8,7 +8,7 @@
 // This is a barebones implementation of Ogg Vorbis based on the specs at xiph.org
 // This doesn't decode PCM samples. It only reads vorbis packets for their blocksize.
 
-enum err;
+enum err : int;
 typedef struct vorbis_state vorbis_state;
 
 // API
@@ -25,7 +25,7 @@ typedef unsigned char byte;
 
 const size_t MAX_PACKET_SIZE = 0x8000; // Don't deal with packets over this size (512k)
 
-enum err {
+enum err : int {
 	OK = 0,
 	READ_ERROR,
 	NO_CAPTURE_PATTERN,

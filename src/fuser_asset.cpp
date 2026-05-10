@@ -1,3 +1,6 @@
+#ifdef PLATFORM_MAC
+#include "platform.h"
+#endif
 #include "uasset.h"
 #include "imgui.h"
 #include "imgui_stdlib.h"
@@ -11,7 +14,9 @@ namespace fs = std::filesystem;
 
 #include "custom_song_pak_template.h"
 
+#ifndef PLATFORM_MAC
 #include <Windows.h>
+#endif
 
 #include "fuser_asset.h"
 
@@ -125,7 +130,7 @@ void display_property(StringRef64& v) {
 }
 
 void display_property(UnknownProperty& v) {
-	ImGui::Text("Unknown Property (Length %d)", v.data);
+	ImGui::Text("Unknown Property (Length %d)", (int)v.data.size());
 }
 
 void display_property(BoolProperty& v) {

@@ -32,7 +32,7 @@ uint32_t read_mb(std::istream& stream) {
         b = read_be<uint8_t>(stream);
         ret += b & 0x7f;
         if (0x80 == (b & 0x80))
-          throw std::exception("Variable-length MIDI number > 4 bytes");
+          throw std::runtime_error("Variable-length MIDI number > 4 bytes");
       }
     }
   }
@@ -52,7 +52,7 @@ std::string read_symbol(std::istream& stream) {
 std::string read_ue4text(std::istream& stream) {
   auto str = read_str(stream, read<uint32_t>(stream) - 1);
   if (stream.get() != 0)
-    throw std::exception("String was not null-terminated");
+    throw std::runtime_error("String was not null-terminated");
   return str;
 }
 

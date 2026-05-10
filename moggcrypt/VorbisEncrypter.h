@@ -23,7 +23,7 @@ public:
 	uint32_t numSamples;
 
 private:
-	void VorbisEncrypter::GenerateIv(uint8_t* header_ptr);
+	void GenerateIv(uint8_t* header_ptr);
 
 
 	void FixCounter(size_t decryptedPos);

@@ -1,3 +1,8 @@
+#ifdef PLATFORM_MAC
+#include <cassert>
+#define _ASSERT(x) assert(x)
+#define _ASSERTE(x) assert(x)
+#endif
 #pragma once
 
 #include <iostream>

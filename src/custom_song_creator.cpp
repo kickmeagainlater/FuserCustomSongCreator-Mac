@@ -1,6 +1,13 @@
+#ifdef PLATFORM_MAC
+#include "platform.h"
+#endif
 #define NOMINMAX
+#ifndef PLATFORM_MAC
 #include <Windows.h>
+#endif
+#ifndef PLATFORM_MAC
 #include <shlwapi.h>
+#endif
 
 #include "uasset.h"
 #include "imgui.h"
@@ -824,6 +831,7 @@ void display_mogg_settings(FusionFileAsset& fusionFile, size_t idx, HmxAudio::Pa
 			std::vector<u8> outData;
 
 			try {
+				infile.clear(); infile.seekg(0); // reset stream exhausted by fileData read
 				VorbisEncrypter ve(&infile, 0x10, cppCallbacks);
 				char buf[8192];
 				size_t read = 0;
@@ -843,8 +851,12 @@ void display_mogg_settings(FusionFileAsset& fusionFile, size_t idx, HmxAudio::Pa
 
 			if (outData.size() > 0 && outData[0] == 0x0B) {
 				std::wstring fPathW(fPath.begin(), fPath.end());
-				const wchar_t* fName = PathFindFileNameW(fPathW.c_str());
-				const wchar_t* fExt = PathFindExtensionW(fName);
+				size_t _fnSlash = fPathW.find_last_of(L"/\\");
+                                std::wstring _fNameStr = (_fnSlash == std::wstring::npos) ? fPathW : fPathW.substr(_fnSlash + 1);
+                                const wchar_t* fName = _fNameStr.c_str();
+				size_t _extDot = _fNameStr.find_last_of(L'.');
+                                std::wstring _fExtStr = (_extDot == std::wstring::npos) ? L"" : _fNameStr.substr(_extDot);
+                                const wchar_t* fExt = _fExtStr.c_str();
 				size_t fNameLen = fExt - fName;
 				std::wstring fNameW(fName, fNameLen);
 				std::string audioLabel(fNameW.begin(), fNameW.end());
@@ -2379,7 +2391,7 @@ static void display_chord_edit(CelData& celData, ImVec2& windowSize, float oggWi
 				ImGui::TableNextRow();
 				ImGui::TableNextColumn();
 				
-				if (ImGui::Selectable(formatFloatString(std::to_string(mfr.chords[i].start / 480.0F),2).c_str(), curChord == i)) {
+				if (ImGui::Selectable([&]{ std::string _ffs = std::to_string(mfr.chords[i].start / 480.0F); return formatFloatString(_ffs,2); }().c_str(), curChord == i)) {
 					curChord = i;
 					chordInput = mfr.chords[i].start / 480.0F;
 				}
@@ -3498,12 +3510,12 @@ void custom_song_creator_update(size_t width, size_t height) {
 			else {
 				select_save_location();
 			}
-			DestroyWindow(G_hwnd);
+			/* DestroyWindow: not available on Mac */
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Exit Without Saving", ImVec2(200, 0)))
 		{
-			DestroyWindow(G_hwnd);
+			/* DestroyWindow: not available on Mac */
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Back", ImVec2(200, 0)))

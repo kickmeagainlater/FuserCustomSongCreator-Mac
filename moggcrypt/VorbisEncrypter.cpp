@@ -1,3 +1,4 @@
+#include <stdexcept>
 #include "VorbisEncrypter.h"
 
 #include <time.h>
@@ -33,9 +34,9 @@ VorbisEncrypter::VorbisEncrypter(void* datasource, ov_callbacks cbStruct)
 		int offset;
 	} original_file_header;
 	if (cbStruct.read_func(&original_file_header, sizeof(original_file_header), 1, file_ref) != 1)
-		throw std::exception("Unable to read mogg header.");
+		throw std::runtime_error("Unable to read mogg header.");
 	if (original_file_header.version != 0xA)
-		throw std::exception("Source mogg must be version 10/0xA (unencrypted).");
+		throw std::runtime_error("Source mogg must be version 10/0xA (unencrypted).");
 
 	struct {
 		uint32_t version;
@@ -44,7 +45,7 @@ VorbisEncrypter::VorbisEncrypter(void* datasource, ov_callbacks cbStruct)
 	} OggMapHdr;
 
 	if (cbStruct.read_func(&OggMapHdr, sizeof(OggMapHdr), 1, file_ref) != 1)
-		throw std::exception("Unable to read OggMap header.");
+		throw std::runtime_error("Unable to read OggMap header.");
 	size_t header_size = 16 /* IV */
 		+ sizeof(original_file_header)
 		+ sizeof(OggMapHdr)
@@ -78,7 +79,7 @@ VorbisEncrypter::VorbisEncrypter(void* datasource, int oggMapType, ov_callbacks 
 
 	auto result = OggMap::Create(datasource, cbStruct);
 	if (std::holds_alternative<std::string>(result)){
-		throw std::exception(std::get<std::string>(result).c_str());
+		throw std::runtime_error(std::get<std::string>(result).c_str());
 	}
 	auto& map = std::get<OggMap>(result);
 	auto mapData = map.Serialize();

@@ -1366,7 +1366,7 @@ struct HmxAudio {
 			}
 			
 			void MFR_from_midi(std::string file) {
-				MidiFile inMidi = MidiFile::ReadMidi (std::ifstream(file, std::ios_base::binary));
+				std::ifstream _midiStream(file, std::ios_base::binary); MidiFile inMidi = MidiFile::ReadMidi(_midiStream);
 				magic = 2;
 				if (inMidi.ticks_per_qn() != 480) {
 					magic = 480;

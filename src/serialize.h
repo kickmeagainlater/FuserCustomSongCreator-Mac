@@ -1,3 +1,6 @@
+#ifdef PLATFORM_MAC
+#include "platform.h"
+#endif
 #pragma once
 #include "core_types.h"
 

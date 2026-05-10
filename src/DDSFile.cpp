@@ -1,3 +1,6 @@
+#ifdef PLATFORM_MAC
+#include "platform.h"
+#endif
 //MIT License
 //
 //Copyright(c) 2018 Sampo Siltanen
@@ -137,37 +140,37 @@ void DDSFile::VConversionInitialize(uint8_t* uncompressedImageData, unsigned int
 	//delete[] uncompressedImageData;
 }
 
-void DDSFile::VCreateFile(std::basic_ofstream<uint8_t>& outputFile) const
+void DDSFile::VCreateFile(std::ofstream& outputFile) const
 {
-	outputFile.write((uint8_t*)"DDS ", 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->dwSize, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->dwFlags, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->dwHeight, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->dwWidth, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->dwPitchOrLinearSize, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->dwDepth, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->dwMipMapCount, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->dwReserved1, 44);
+	outputFile.write((const char*)"DDS ", 4);
+	outputFile.write((const char*)&m_pDdsHeader->dwSize, 4);
+	outputFile.write((const char*)&m_pDdsHeader->dwFlags, 4);
+	outputFile.write((const char*)&m_pDdsHeader->dwHeight, 4);
+	outputFile.write((const char*)&m_pDdsHeader->dwWidth, 4);
+	outputFile.write((const char*)&m_pDdsHeader->dwPitchOrLinearSize, 4);
+	outputFile.write((const char*)&m_pDdsHeader->dwDepth, 4);
+	outputFile.write((const char*)&m_pDdsHeader->dwMipMapCount, 4);
+	outputFile.write((const char*)&m_pDdsHeader->dwReserved1, 44);
 
-	outputFile.write((uint8_t*)&m_pDdsHeader->ddspf.dwsize, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->ddspf.dwflags, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->ddspf.dwfourCC, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->ddspf.dwRGBBitCount, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->ddspf.dwRBitMask, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->ddspf.dwGBitMask, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->ddspf.dwBBitMask, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->ddspf.dwABitMask, 4);
+	outputFile.write((const char*)&m_pDdsHeader->ddspf.dwsize, 4);
+	outputFile.write((const char*)&m_pDdsHeader->ddspf.dwflags, 4);
+	outputFile.write((const char*)&m_pDdsHeader->ddspf.dwfourCC, 4);
+	outputFile.write((const char*)&m_pDdsHeader->ddspf.dwRGBBitCount, 4);
+	outputFile.write((const char*)&m_pDdsHeader->ddspf.dwRBitMask, 4);
+	outputFile.write((const char*)&m_pDdsHeader->ddspf.dwGBitMask, 4);
+	outputFile.write((const char*)&m_pDdsHeader->ddspf.dwBBitMask, 4);
+	outputFile.write((const char*)&m_pDdsHeader->ddspf.dwABitMask, 4);
 
-	outputFile.write((uint8_t*)&m_pDdsHeader->dwCaps, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->dwCaps2, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->dwDepth, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->dwCaps3, 4);
-	outputFile.write((uint8_t*)&m_pDdsHeader->dwReserved2, 4);
+	outputFile.write((const char*)&m_pDdsHeader->dwCaps, 4);
+	outputFile.write((const char*)&m_pDdsHeader->dwCaps2, 4);
+	outputFile.write((const char*)&m_pDdsHeader->dwDepth, 4);
+	outputFile.write((const char*)&m_pDdsHeader->dwCaps3, 4);
+	outputFile.write((const char*)&m_pDdsHeader->dwReserved2, 4);
 
 	//write pixels
 	unsigned int arraySize = m_pDdsHeader->dwPitchOrLinearSize;
 	for (unsigned int i = 0; i < arraySize; ++i) {
-		outputFile.write((uint8_t*)&m_mainData[i], 1);
+		outputFile.write((const char*)&m_mainData[i], 1);
 	}
 	outputFile.close();
 }

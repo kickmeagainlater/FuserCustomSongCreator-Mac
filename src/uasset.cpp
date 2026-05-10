@@ -1,3 +1,6 @@
+#ifdef PLATFORM_MAC
+#include "platform.h"
+#endif
 #include "uasset.h"
 
 namespace asset_helper {

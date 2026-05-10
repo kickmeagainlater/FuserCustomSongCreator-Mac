@@ -56,7 +56,7 @@ public:
 
 	void VInitializeFromFile(const std::string& location);
 	void VConversionInitialize(uint8_t* uncompressedImageData, unsigned int imageSize, unsigned int width, unsigned int height);
-	void VCreateFile(std::basic_ofstream<uint8_t>& outputFile) const;
+	void VCreateFile(std::ofstream& outputFile) const;
 	unsigned int VGetWidth() const;
 	unsigned int VGetHeight() const;
 	unsigned int VGetImageByteSize() const;

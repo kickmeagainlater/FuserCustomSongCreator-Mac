@@ -78,6 +78,7 @@ struct AudioCtx {
 AudioCtx gAudio;
 bool unsavedChanges = false;
 bool closePressed = false;
+bool quitApp = false;
 bool filenameArg = false;
 std::string filenameArgPath;
 
@@ -826,39 +827,45 @@ void display_mogg_settings(FusionFileAsset& fusionFile, size_t idx, HmxAudio::Pa
 				}
 			}
 
-			std::ifstream infile(conversionFailed ? std::string() : streamPath, std::ios_base::binary);
-			std::vector<u8> fileData = std::vector<u8>(std::istreambuf_iterator<char>(infile), std::istreambuf_iterator<char>());
+			// Read raw OGG bytes for playback preview
+			std::vector<u8> fileData;
 			std::vector<u8> outData;
 
-			try {
-				infile.clear(); infile.seekg(0); // reset stream exhausted by fileData read
-				VorbisEncrypter ve(&infile, 0x10, cppCallbacks);
-				char buf[8192];
-				size_t read = 0;
-				size_t offset = 0;
-				do {
-					outData.resize(outData.size() + sizeof(buf));
-					read = ve.ReadRaw(outData.data() + offset, 1, 8192);
-					offset += read;
-				} while (read != 0);
+			if (!conversionFailed) {
+				{
+					std::ifstream f(streamPath, std::ios_base::binary);
+					fileData = std::vector<u8>(std::istreambuf_iterator<char>(f),
+					                          std::istreambuf_iterator<char>());
+				}
 
-				header.sample_rate = ve.sample_rate;
-				header.numberOfSamples = ve.numSamples;
-			}
-			catch (std::exception& e) {
-				lastMoggError = e.what();
+				// Open a fresh stream for VorbisEncrypter (avoids seekg-after-exhaust issues)
+				try {
+					std::ifstream encStream(streamPath, std::ios_base::binary);
+					if (!encStream) throw std::runtime_error("Could not open audio file for encryption");
+					VorbisEncrypter ve(&encStream, 0x10, cppCallbacks);
+					size_t read = 0;
+					size_t offset = 0;
+					do {
+						outData.resize(offset + 8192);
+						read = ve.ReadRaw(outData.data() + offset, 1, 8192);
+						offset += read;
+					} while (read != 0);
+					outData.resize(offset);
+
+					header.sample_rate = ve.sample_rate;
+					header.numberOfSamples = ve.numSamples;
+				}
+				catch (std::exception& e) {
+					lastMoggError = e.what();
+				}
 			}
 
-			if (outData.size() > 0 && outData[0] == 0x0B) {
+			if (!conversionFailed && outData.size() > 0 && outData[0] == 0x0B) {
 				std::wstring fPathW(fPath.begin(), fPath.end());
 				size_t _fnSlash = fPathW.find_last_of(L"/\\");
-                                std::wstring _fNameStr = (_fnSlash == std::wstring::npos) ? fPathW : fPathW.substr(_fnSlash + 1);
-                                const wchar_t* fName = _fNameStr.c_str();
+				std::wstring _fNameStr = (_fnSlash == std::wstring::npos) ? fPathW : fPathW.substr(_fnSlash + 1);
 				size_t _extDot = _fNameStr.find_last_of(L'.');
-                                std::wstring _fExtStr = (_extDot == std::wstring::npos) ? L"" : _fNameStr.substr(_extDot);
-                                const wchar_t* fExt = _fExtStr.c_str();
-				size_t fNameLen = fExt - fName;
-				std::wstring fNameW(fName, fNameLen);
+				std::wstring fNameW = (_extDot == std::wstring::npos) ? _fNameStr : _fNameStr.substr(0, _extDot);
 				std::string audioLabel(fNameW.begin(), fNameW.end());
 				auto&& asset = std::get<HmxAssetFile>(fusionFile.file.e->getData().data.catagoryValues[0].value);
 				if (replaceAudioLabel) {
@@ -875,7 +882,7 @@ void display_mogg_settings(FusionFileAsset& fusionFile, size_t idx, HmxAudio::Pa
 				fusionFile.playableMoggs[idx].oggData = std::move(fileData);
 				unsavedChanges = true;
 			}
-			else {
+			else if (!conversionFailed) {
 				ImGui::OpenPopup("Ogg loading error");
 			}
 
@@ -3510,12 +3517,14 @@ void custom_song_creator_update(size_t width, size_t height) {
 			else {
 				select_save_location();
 			}
-			/* DestroyWindow: not available on Mac */
+			ImGui::CloseCurrentPopup();
+			quitApp = true;
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Exit Without Saving", ImVec2(200, 0)))
 		{
-			/* DestroyWindow: not available on Mac */
+			ImGui::CloseCurrentPopup();
+			quitApp = true;
 		}
 		ImGui::SameLine();
 		if (ImGui::Button("Back", ImVec2(200, 0)))

@@ -35,6 +35,7 @@ extern void set_g_pd3dDevice(ID3D11Device* p);
 extern void initAudio();
 extern bool unsavedChanges;
 extern bool closePressed;
+extern bool quitApp;
 extern bool filenameArg;
 extern std::string filenameArgPath;
 
@@ -186,6 +187,10 @@ int main(int argc, char** argv)
 
         set_g_pd3dDevice(nullptr);  // no-op on Mac
         custom_song_creator_update(window_width, window_height);
+        if (quitApp) {
+            glfwSetWindowShouldClose(window, GLFW_TRUE);
+            quitApp = false;
+        }
 
         ImGui::Render();
         int fw, fh;

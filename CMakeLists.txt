@@ -95,8 +95,8 @@ elseif(APPLE)
         OUTPUT_NAME "Fuser Custom Song Creator"
         MACOSX_BUNDLE_BUNDLE_NAME "Fuser Custom Song Creator"
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.kickmeagainlater.fusercustomsongcreator"
-        MACOSX_BUNDLE_BUNDLE_VERSION "2.1.6.2"
-        MACOSX_BUNDLE_SHORT_VERSION_STRING "2.1.6.2"
+        MACOSX_BUNDLE_BUNDLE_VERSION "2.2.0"
+        MACOSX_BUNDLE_SHORT_VERSION_STRING "2.2.0"
         MACOSX_BUNDLE_ICON_FILE "AppIcon.icns"
         MACOSX_BUNDLE_COPYRIGHT "MIT"
     )

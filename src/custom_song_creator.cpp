@@ -447,6 +447,7 @@ void load_file(DataBuffer&& dataBuf) {
 		FuserEnums::KeyMode::Value keyMode = gCtx.currentPak->root.keyMode;
 		FuserEnums::Genre::Value genre = gCtx.currentPak->root.genre;
 		i32 year = gCtx.currentPak->root.year;
+		std::vector<bool> saveCelAsNull = gCtx.currentPak->root.saveCelAsNull;
 		std::vector<HmxAudio::PackageFile> celFusionPackageFile;
 		std::vector<std::vector<HmxAudio::PackageFile>> celMoggFiles;
 		std::vector<std::string> instrumentTypes;
@@ -487,9 +488,16 @@ void load_file(DataBuffer&& dataBuf) {
 		gCtx.currentPak->root.keyMode = keyMode;
 		gCtx.currentPak->root.genre = genre;
 		gCtx.currentPak->root.year = year;
+		gCtx.currentPak->root.saveCelAsNull = saveCelAsNull;
+		if (gCtx.currentPak->root.saveCelAsNull.size() < gCtx.currentPak->root.celData.size()) {
+			gCtx.currentPak->root.saveCelAsNull.resize(gCtx.currentPak->root.celData.size(), false);
+		}
 
 		int idx = 0;
 		for (auto& cel : gCtx.currentPak->root.celData) {
+			if (idx >= celShortName.size()) {
+				break;
+			}
 			
 			cel.data.shortName = celShortName[idx];
 			auto&& fusionFile = cel.data.majorAssets[0].data.fusionFile.data;
@@ -615,7 +623,13 @@ void write_sig(DataBuffer outBuf, std::string outPath) {
 	std::ofstream outPak(outPath, std::ios_base::binary);
 	outPak.write((char*)sigOutBuf.buffer, sigOutBuf.size);
 }
+bool Error_FullyBlankNullCel = false;
 void save_file() {
+	if (gCtx.currentPak != nullptr && gCtx.currentPak->root.wouldSaveFullyBlankSong()) {
+		Error_FullyBlankNullCel = true;
+		return;
+	}
+
 	SongSerializationCtx ctx;
 	ctx.loading = false;
 	ctx.pak = &gCtx.currentPak->pak;
@@ -1687,9 +1701,9 @@ static void display_fusionmidisettings(HmxAssetFile& asset, CelData& celData, Hm
 	
 }
 
-const char* chordNamesMinorMajor[] = { "1m", "2mb5", "b3", "4m", "5m", "b6", "b7", "sep", "1", "2m", "3m", "4", "5", "6m", "sep", "b2" };
-const char* chordNamesMajorMinor[] = { "1", "2m", "3m", "4", "5", "6m", "sep", "1m", "2mb5", "b3", "4m", "5m", "b6", "b7", "sep", "b2" };
-const char* chordNamesInterleaved[] = { "1", "1m", "2m", "2mb5", "3m", "b3", "4", "4m", "5", "5m", "6m", "b6", "b7", "b2" };
+const char* chordNamesMinorMajor[] = { "1m", "2mb5", "b3", "4m", "5m", "b6", "b7", "sep", "1", "2m", "3m", "4", "5", "6m", "7mb5", "sep", "#1", "#1m", "2", "3", "b3m", "b5", "b5m", "b5mb5", "6", "b6m", "7", "7m", "b7m", "1sus2" };
+const char* chordNamesMajorMinor[] = { "1", "2m", "3m", "4", "5", "6m", "7mb5", "sep", "1m", "2mb5", "b3", "4m", "5m", "b6", "b7", "sep", "#1", "#1m", "2", "3", "b3m", "b5", "b5m", "b5mb5", "6", "b6m", "7", "7m", "b7m", "1sus2" };
+const char* chordNamesInterleaved[] = { "1", "1m", "#1", "#1m", "2", "2m", "2mb5", "3", "3m", "b3", "b3m", "4", "4m", "5", "5m", "b5", "b5m", "b5mb5", "6", "6m", "b6", "b6m", "7", "7m", "7mb5", "b7", "b7m", "1sus2" };
 
 static std::vector<HmxAudio::PackageFile::MidiFileResource::Chord> convertChordsMode(std::vector<HmxAudio::PackageFile::MidiFileResource::Chord> chords, bool minor) {
 	for (auto& chd : chords) {
@@ -1698,28 +1712,37 @@ static std::vector<HmxAudio::PackageFile::MidiFileResource::Chord> convertChords
 				chd.name = "1m";
 			else if (chd.name == "1m")
 				chd.name = "1";
-			else if (chd.name == "2m")
+			else if (chd.name == "2m" || chd.name == "2")
 				chd.name = "2mb5";
-			else if (chd.name == "2mb5")
+			else if (chd.name == "2mb5" || chd.name == "#1")
 				chd.name = "2m";
-			else if (chd.name == "3m")
+			else if (chd.name == "3m" || chd.name == "3")
 				chd.name = "b3";
-			else if (chd.name == "b3")
+			else if (chd.name == "b3" || chd.name == "b3m")
 				chd.name = "3m";
-			else if (chd.name == "4")
+			else if (chd.name == "4" || chd.name == "b5mb5")
 				chd.name = "4m";
 			else if (chd.name == "4m")
 				chd.name = "4";
-			else if (chd.name == "5m" || chd.name == "b7")
+			else if (chd.name == "5m")
 				chd.name = "5";
 			else if (chd.name == "5")
 				chd.name = "5m";
 			else if (chd.name == "b6")
 				chd.name = "6m";
-			else if (chd.name == "6m")
+			else if (chd.name == "6m" || chd.name == "6")
 				chd.name = "b6";
+			else if (chd.name == "b7" || chd.name == "b7m")
+				chd.name = "7mb5";
+			else if (chd.name == "7mb5" || chd.name == "7m")
+				chd.name = "b7";
 			else {
-				if (chd.name != "b2") {
+				if (chd.name != "#1m" && 
+					chd.name != "b5" &&
+					chd.name != "b5m" &&
+					chd.name != "b6m" &&
+					chd.name != "7" &&
+					chd.name != "1sus2") {
 					if (minor)
 						chd.name = "1m";
 					else
@@ -1731,16 +1754,18 @@ static std::vector<HmxAudio::PackageFile::MidiFileResource::Chord> convertChords
 			if (minor) {
 				if (chd.name == "1")
 					chd.name = "1m";
-				else if (chd.name == "2m")
+				else if (chd.name == "2m" || chd.name == "2")
 					chd.name = "2mb5";
-				else if (chd.name == "3m")
+				else if (chd.name == "3m" || chd.name == "3")
 					chd.name = "b3";
-				else if (chd.name == "4")
+				else if (chd.name == "4" || chd.name == "b5mb5")
 					chd.name = "4m";
 				else if (chd.name == "5")
 					chd.name = "5m";
-				else if (chd.name == "6m")
+				else if (chd.name == "6m" || chd.name == "6")
 					chd.name = "b6";
+				else if (chd.name == "7mb5" || chd.name == "7m")
+					chd.name = "b7";
 				else {
 					if (chd.name != "1m" &&
 						chd.name != "2mb5" &&
@@ -1749,7 +1774,15 @@ static std::vector<HmxAudio::PackageFile::MidiFileResource::Chord> convertChords
 						chd.name != "5m" &&
 						chd.name != "b6" &&
 						chd.name != "b7" &&
-						chd.name != "b2") {
+						chd.name != "#1" &&
+						chd.name != "#1m" &&
+						chd.name != "b3m" &&
+						chd.name != "b5" &&
+						chd.name != "b5m" &&
+						chd.name != "b6m" &&
+						chd.name != "7" &&
+						chd.name != "b7m" &&
+						chd.name != "1sus2") {
 						chd.name = "1m";
 					}
 				}
@@ -1757,16 +1790,18 @@ static std::vector<HmxAudio::PackageFile::MidiFileResource::Chord> convertChords
 			else {
 				if (chd.name == "1m")
 					chd.name = "1";
-				else if (chd.name == "2mb5")
+				else if (chd.name == "2mb5" || chd.name == "#1")
 					chd.name = "2m";
-				else if (chd.name == "b3")
+				else if (chd.name == "b3" || chd.name == "b3m")
 					chd.name = "3m";
 				else if (chd.name == "4m")
 					chd.name = "4";
-				else if (chd.name == "5m" || chd.name == "b7")
+				else if (chd.name == "5m")
 					chd.name = "5";
 				else if (chd.name == "b6")
 					chd.name = "6m";
+				else if (chd.name == "b7" || chd.name == "b7m")
+					chd.name = "7mb5";
 				else {
 					if (chd.name != "1" &&
 						chd.name != "2m" &&
@@ -1774,13 +1809,24 @@ static std::vector<HmxAudio::PackageFile::MidiFileResource::Chord> convertChords
 						chd.name != "4" &&
 						chd.name != "5" &&
 						chd.name != "6m" &&
-						chd.name != "b2") {
+						chd.name != "7mb5" &&
+						chd.name != "#1m" &&
+						chd.name != "2" &&
+						chd.name != "3" &&
+						chd.name != "b5" &&
+						chd.name != "b5m" &&
+						chd.name != "b5mb5" &&
+						chd.name != "6" &&
+						chd.name != "b6m" &&
+						chd.name != "7" &&
+						chd.name != "7m" &&
+						chd.name != "1sus2") {
 						chd.name = "1";
 					}
 				}
 			}
 		}
-		
+
 	}
 	return chords;
 }
@@ -2332,7 +2378,12 @@ static void display_cel_audio_options(CelData& celData, HmxAssetFile& asset, std
 			label.value = 1;
 			ts.children.insert(ts.children.begin(), label);
 		}
-
+		if (ts2.getChild("orig_tempo_sync") == nullptr) {
+			hmx_fusion_node label;
+			label.key = "orig_tempo_sync";
+			label.value = 1;
+			ts2.children.insert(ts2.children.begin(), label);
+		}
 		bool orig_tempo_sync = ts.getInt("orig_tempo_sync") == 1;
 		bool ots_changed = ImGui::Checkbox("Sync orig_tempo to song tempo", &orig_tempo_sync);
 		ImGui::SameLine();
@@ -2341,9 +2392,11 @@ static void display_cel_audio_options(CelData& celData, HmxAssetFile& asset, std
 			unsavedChanges = true;
 			if (orig_tempo_sync) {
 				ts.getInt("orig_tempo_sync") = 1;
+				ts2.getInt("orig_tempo_sync") = 1;
 			}
 			else {
 				ts.getInt("orig_tempo_sync") = 0;
+				ts2.getInt("orig_tempo_sync") = 0;
 			}
 		}
 		if (!orig_tempo_sync) {
@@ -2448,7 +2501,7 @@ static void display_chord_edit(CelData& celData, ImVec2& windowSize, float oggWi
 								
 								bool is_selected = (selectedChordIndex == k);
 								//used to work checking if the value at the current index is "sep" but it stopped working for some reason?????? so hardcoding the values
-								if (k==7 || k==14) {
+								if (k==7 || k==15) {
 									float separatorPadding = 2.0f; // Adjust the padding value as needed
 									float originalCursorPosY = ImGui::GetCursorPosY();
 
@@ -2478,7 +2531,7 @@ static void display_chord_edit(CelData& celData, ImVec2& windowSize, float oggWi
 							{
 
 								bool is_selected = (selectedChordIndex == k);
-								if (k==6 || k==14) {
+								if (k==7 || k==15) {
 									float separatorPadding = 2.0f; // Adjust the padding value as needed
 									float originalCursorPosY = ImGui::GetCursorPosY();
 
@@ -2948,11 +3001,11 @@ static void display_cel_data(CelData& celData, FuserEnums::KeyMode::Value curren
 					ImGui::EndChild();
 					ImGui::BeginChild("PickupButtons", ImVec2(windowSize.x / 3, 145));
 					if (ImGui::InputFloat("Pickup Beat", &pickupInput, 0.0F, 0.0F, "%.2f", ImGuiInputTextFlags_CharsDecimal)) {
-						pickupInput = std::round(std::clamp(pickupInput, 0.0F, 128.0F) * 100) / 100;
+						pickupInput = std::round(std::clamp(pickupInput, 0.0F, 2048.0F) * 100) / 100;
 					}
 					if (ImGui::Button("Add Pickup")) {
 						unsavedChanges = true;
-						pickupInput = std::round(std::clamp(pickupInput, 0.0F, 128.0F) * 100) / 100;
+						pickupInput = std::round(std::clamp(pickupInput, 0.0F, 2048.0F) * 100) / 100;
 
 						if (celData.pickupArray->values.size() > 0) {
 							std::vector<float> pickups;
@@ -2992,7 +3045,7 @@ static void display_cel_data(CelData& celData, FuserEnums::KeyMode::Value curren
 					ImGui::SameLine();
 					if (ImGui::Button("Update Pickup") && celData.pickupArray->values.size() > 0) {
 						unsavedChanges = true;
-						pickupInput = std::round(std::clamp(pickupInput, 0.0F, 128.0F) * 100) / 100;
+						pickupInput = std::round(std::clamp(pickupInput, 0.0F, 2048.0F) * 100) / 100;
 						if (celData.pickupArray->values.size() == 1) {
 							std::get<PrimitiveProperty<float>>(celData.pickupArray->values[curPickup]->v).data = pickupInput;
 						}
@@ -3462,19 +3515,73 @@ void custom_song_creator_update(size_t width, size_t height) {
 				ImGui::EndChild();
 				ImGui::EndTabItem();
 			}
-			int idx = 0;
-			for (auto&& cel : gCtx.currentPak->root.celData) {
-				cel.data.clampBPM = !fcsc_cfg.disableClamping;
-				cel.data.songTransitionFile.data.clampBPM = !fcsc_cfg.disableClamping;
-				std::string tabName = "Song Cell " + std::to_string(idx / 2) + " - ";
-				tabName += cel.data.type.getString();
-				tabName += "##Cel" + std::to_string(idx / 2);
+			const char* slotNames[] = { "Beat", "Bass", "Loop", "Lead" };
+			size_t slotCount = gCtx.currentPak->root.saveCelAsNull.size();
+			if (slotCount < 4) {
+				slotCount = 4;
+			}
+			if (gCtx.currentPak->root.celDataIndexForSlot.size() < slotCount) {
+				gCtx.currentPak->root.celDataIndexForSlot.resize(slotCount, static_cast<size_t>(-1));
+			}
+			if (gCtx.currentPak->root.saveCelAsNull.size() < slotCount) {
+				gCtx.currentPak->root.saveCelAsNull.resize(slotCount, false);
+			}
+
+			for (size_t celSlotIdx = 0; celSlotIdx < slotCount; ++celSlotIdx) {
+				size_t dataIdx = gCtx.currentPak->root.celDataIndexForSlot[celSlotIdx];
+				CelData* celData = nullptr;
+				if (dataIdx != static_cast<size_t>(-1) && dataIdx < gCtx.currentPak->root.celData.size()) {
+					celData = &gCtx.currentPak->root.celData[dataIdx].data;
+				}
+
+				if (celData != nullptr) {
+					celData->clampBPM = !fcsc_cfg.disableClamping;
+					celData->songTransitionFile.data.clampBPM = !fcsc_cfg.disableClamping;
+				}
+
+				std::string tabName = "Song Cell " + std::to_string(celSlotIdx) + " - ";
+				if (celData != nullptr) {
+					tabName += celData->type.getString();
+				}
+				else if (celSlotIdx < 4) {
+					tabName += slotNames[celSlotIdx];
+				}
+				else {
+					tabName += "Unknown";
+				}
+
+				tabName += "##Cel" + std::to_string(celSlotIdx);
+
 				if (ImGui::BeginTabItem(tabName.c_str())) {
-					curCelTab = idx;
-					display_cel_data(cel.data, gCtx.currentPak->root.keyMode);
+					curCelTab = static_cast<int>(celSlotIdx * 2);
+					bool wasNull = gCtx.currentPak->root.saveCelAsNull[celSlotIdx];
+					bool saveAsNullCheckboxValue = wasNull;
+					std::string checkboxLabel = "Save this channel as empty##SaveCellAsNull" + std::to_string(celSlotIdx);
+					if (ImGui::Checkbox(checkboxLabel.c_str(), &saveAsNullCheckboxValue)) {
+						gCtx.currentPak->root.saveCelAsNull[celSlotIdx] = saveAsNullCheckboxValue;
+						if (wasNull != saveAsNullCheckboxValue) {
+							unsavedChanges = true;
+						}
+					}
+
+					if (gCtx.currentPak->root.saveCelAsNull[celSlotIdx]) {
+						ImGui::TextDisabled("This slot will be hidden in-game by saving root Cels[%d] as empty.", (int)celSlotIdx);
+						if (celData != nullptr) {
+							ImGui::TextDisabled("The cel data was found and will stay editable/preserved.");
+						}
+						else {
+							ImGui::TextDisabled("No preserved cel asset was found for this empty slot.");
+						}
+					}
+
+					if (celData != nullptr) {
+						display_cel_data(*celData, gCtx.currentPak->root.keyMode);
+					}
+					else {
+						ImGui::TextDisabled("This empty slot has no recoverable editor data in the loaded pak.");
+					}
 					ImGui::EndTabItem();
 				}
-				idx += 2;
 			}
 
 			ImGui::EndTabBar();
@@ -3484,9 +3591,14 @@ void custom_song_creator_update(size_t width, size_t height) {
 			ImGui::OpenPopup("Invalid File Name");
 			Error_InvalidFileName = false;
 		}
+		if (Error_FullyBlankNullCel) {
+			ImGui::OpenPopup("Cannot Save Fully Blank Song");
+			Error_FullyBlankNullCel = false;
+		}
 		auto fileName = gCtx.currentPak->root.shortName + "_P.pak";
 		auto error = "Your file must be named as " + fileName + ", otherwise the song loader won't unlock it!";
 		ErrorModal("Invalid File Name", error.c_str());
+		ErrorModal("Cannot Save Fully Blank Song", "Cannot save a fully blank song. At least one song cell must remain enabled.");
 	}
 	else {
 		ImGui::Text("Welcome to the Fuser Custom Song Creator!");

@@ -7,7 +7,13 @@ on the user's machine, signed ad-hoc so Gatekeeper doesn't refuse it.
 Requires [Fuser Song Loader][songloader] in Fuser itself for the songs
 to actually load in-game.
 
+Also supports the [Custom Chords mod][customchords], which adds more
+chord options for songs. Songs that use the extra chords still work
+without the mod, but instruments won't follow the chords as intended
+unless it's installed.
+
 [upstream]: https://github.com/NarrikSynthfox/FuserCustomSongCreator
+[customchords]: https://drive.google.com/file/d/1MI1G1l7FhL-KB7muAVgyIcqKqEQFKxnz/view?usp=sharing
 [songloader]: https://github.com/NarrikSynthfox/FuserSongLoader
 
 ## What this fork adds over upstream
@@ -74,8 +80,8 @@ open "build/Fuser Custom Song Creator.app"
 
 ## Original repository
 
-This fork tracks the dev branch of the upstream Windows project:
-<https://github.com/NarrikSynthfox/FuserCustomSongCreator-dev>.
+This fork tracks the upstream Windows project:
+<https://github.com/NarrikSynthfox/FuserCustomSongCreator>.
 
 ## License
 
